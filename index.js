@@ -41,6 +41,15 @@ ui.removeControl('mapsettings');
 // Instantiate data lens service
 var service = platform.configure(new H.datalens.Service());
 
+let userRadius = prompt("What radius in KM")
+
+// Instantiate a circle object (using the default style):
+var circle = new H.map.Circle({lat: 41.8781, lng: -87.6298}, userRadius*1000);
+  
+// Add the circle to the map:
+map.addObject(circle);
+
+
 // Get query stats
 service.fetchQueryStats(query.id, {
     stats: [
@@ -77,6 +86,7 @@ service.fetchQueryStats(query.id, {
 
     //init controls
     const bandwidthCtl = new Slider(10);
+    const radiusCtl = new Slider(10);
 
     let bandwidth = [{
             value: 0.5,
@@ -87,6 +97,10 @@ service.fetchQueryStats(query.id, {
             zoom: 17
         }
     ];
+
+    let radius = [{
+        value: 0.5
+    }]
 
     const provider = new H.datalens.QueryTileProvider(
         service, {
@@ -110,6 +124,7 @@ service.fetchQueryStats(query.id, {
                 };
             },
             bandwidth: bandwidth,
+            radius: radius,
             valueRange: {
                 value: columnStats.count_sum.$average,
                 zoom: 4
@@ -123,21 +138,37 @@ service.fetchQueryStats(query.id, {
     //init legend panel
     const panel = new Panel('Density map');
     const bandwidthLabel = new Label();
+    const radiusLabel = new Label();
     const colorLegend = new ColorLegend(colorScale);
     ui.addControl('panel', panel);
     panel.addChild(bandwidthLabel);
     panel.addChild(bandwidthCtl);
+    panel.addChild(radiusLabel);
+    panel.addChild(radiusCtl);
     panel.addChild(colorLegend);
 
     //connect ui with layer
-    function updatePanel() {
+    function updateBandwidth() {
         let bandwidthCoeff = bandwidthCtl.getValue() >=1 ? bandwidthCtl.getValue()/10: 1;
         bandwidth[0].value = bandwidthCoeff * 0.5;
         bandwidth[1].value = bandwidthCoeff * 4;
         bandwidthLabel.setHTML(`bandwidth: ${bandwidthCoeff}px`);
     }
-    updatePanel();
-    layer.addEventListener('update', updatePanel);
+
+    function updateRadius() {
+        let radiusCoeff = radiusCtl.getValue() >= 1 ? radiusCtl.getValue()/10: 1;
+        radius.value = radiusCoeff * 4;
+        // Instantiate a circle object (using the default style):
+        var circle = new H.map.Circle({lat: 41.8781, lng: -87.6298}, userRadius*1000);
+        radiusLabel.setHTML(`radius: ${radiusCoeff}km`)
+        // Add the circle to the map:
+        map.addObject(circle);
+    }
+
+    updateBandwidth();
+    layer.addEventListener('update', updateBandwidth);
+    updateRadius()
+    layer.addEventListener('update', updateRadius);
     panel.addEventListener('change', () => layer.redraw());
 
 });
